@@ -1,26 +1,58 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect } from 'react'
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+import { BrowserRouter as Router } from 'react-router-dom'
+
+import {
+  AuthenticationProvider,
+  oidcLog,
+  useReactOidc,
+  WebStorageStateStore
+} from '@axa-fr/react-oidc-context'
+
+import VideoConference from './VideoConference'
+import { client } from './config'
+
+const VideoConferenceLayer = () => {
+  const { oidcUser, login } = useReactOidc()
+  useEffect(() => {
+    if (!oidcUser) {
+      login()
+    }
+  }, [])
+
+  if (!oidcUser) {
+    return null
+  }
+
+  const userInfo = {
+    email: oidcUser?.profile?.email,
+    displayName:
+      oidcUser?.profile?.given_name + ' ' + oidcUser?.profile?.family_name
+  }
+
+  return <VideoConference userInfo={userInfo} roomName='test room name' />
 }
 
-export default App;
+const LoadingIndicator = () => {
+  return <div>Loading...</div>
+}
+
+const App = () => {
+  return (
+    <>
+      <Router>
+        <AuthenticationProvider
+          configuration={client}
+          loggerLevel={oidcLog.NONE}
+          UserStore={WebStorageStateStore}
+          callbackComponentOverride={LoadingIndicator}
+        >
+          <VideoConferenceLayer />
+        </AuthenticationProvider>
+      </Router>
+      <VideoConference />
+    </>
+  )
+}
+
+export default App
